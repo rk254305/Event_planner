@@ -4,8 +4,7 @@ from langchain_community.embeddings import OllamaEmbeddings
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.tools import tool
-from langchain.agents import create_react_agent, AgentExecutor
-from langchain import hub
+from langgraph.prebuilt import create_react_agent
 
 
 class EventPlannerAI:
@@ -40,7 +39,6 @@ Question:
             | self.parser
         )
 
-        # -------- TOOLS --------
         @tool
         def event_knowledge_tool(query: str) -> str:
             """Use this tool to answer event planning questions using knowledge base"""
@@ -53,21 +51,10 @@ Question:
 
         self.tools = [event_knowledge_tool]
 
-        # -------- AGENT --------
-        prompt = hub.pull("hwchase17/react")
+        self.agent = create_react_agent(self.llm, self.tools)
 
-        agent = create_react_agent(
-            llm=self.llm,
-            tools=self.tools,
-            prompt=prompt
-        )
-
-        self.agent_executor = AgentExecutor(
-            agent=agent,
-            tools=self.tools,
-            verbose=True
-        )
-
-    # -------- PUBLIC METHODS --------
-    def ask_agent(self, query: str):
-        return self.agent_executor.invoke({"input": query})["output"]
+        def ask_agent(self, query: str):
+         response = self.agent.invoke({
+            "messages": [("user", query)]
+         })
+         return response["messages"][-1].content
